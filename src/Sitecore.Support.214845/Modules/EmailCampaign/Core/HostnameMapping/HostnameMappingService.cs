@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Linq;
 using Sitecore.Diagnostics;
 using Sitecore.EmailCampaign.Model.Web.Settings;
 using Sitecore.ExM.Framework.Diagnostics;
 using Sitecore.Modules.EmailCampaign;
 using Sitecore.Modules.EmailCampaign.Core.HostnameMapping;
+using Sitecore.Web;
 
 namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
 {
@@ -48,7 +50,8 @@ namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
       var byHostname = _hostnameMappingRepository.GetByHostname(leftPart);
       if (byHostname == null)
       {
-        if (!string.Equals(leftPart, GlobalSettings.RendererUrl, StringComparison.OrdinalIgnoreCase))
+        if (!IsInternalLink(originalUrl) &&
+            !string.Equals(leftPart, GlobalSettings.RendererUrl, StringComparison.OrdinalIgnoreCase))
         {
           _logger.LogDebug("No mapping definition found for hostname: " + leftPart);
           return originalUrl;
@@ -73,6 +76,21 @@ namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
       }
 
       return (byHostname.Preview ?? byHostname.Public) + uri.PathAndQuery;
+    }
+
+    private bool IsInternalLink(string url)
+    {
+      Uri uri;
+      if (!Uri.TryCreate(url, UriKind.Absolute, out uri))
+      {
+        return false;
+      }
+
+      var hostname = uri.GetLeftPart(UriPartial.Authority);
+
+      var serverUrl = WebUtil.GetServerUrl();
+      var knownHostnames = GetKnownHostnames(serverUrl);
+      return knownHostnames.Contains(hostname, StringComparer.InvariantCultureIgnoreCase);
     }
   }
 }
