@@ -5,7 +5,7 @@ using Sitecore.EmailCampaign.Model.Web.Settings;
 using Sitecore.ExM.Framework.Diagnostics;
 using Sitecore.Modules.EmailCampaign;
 using Sitecore.Modules.EmailCampaign.Core.HostnameMapping;
-using Sitecore.Web;
+using SupportWebUtil = Sitecore.Support.Web.WebUtil;
 
 namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
 {
@@ -81,6 +81,7 @@ namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
     private bool IsInternalLink(string url)
     {
       Uri uri;
+
       if (!Uri.TryCreate(url, UriKind.Absolute, out uri))
       {
         return false;
@@ -88,7 +89,7 @@ namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
 
       var hostname = uri.GetLeftPart(UriPartial.Authority);
 
-      var serverUrl = WebUtil.GetServerUrl();
+      var serverUrl = SupportWebUtil.GetServerUrl();
       var knownHostnames = GetKnownHostnames(serverUrl);
       return knownHostnames.Contains(hostname, StringComparer.InvariantCultureIgnoreCase);
     }
