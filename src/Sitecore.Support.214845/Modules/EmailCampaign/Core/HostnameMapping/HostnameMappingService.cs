@@ -50,7 +50,8 @@ namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
       var byHostname = _hostnameMappingRepository.GetByHostname(leftPart);
       if (byHostname == null)
       {
-        if (!string.Equals(leftPart, GlobalSettings.RendererUrl, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(leftPart, GlobalSettings.RendererUrl, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(leftPart, Sitecore.Globals.ServerUrl, StringComparison.OrdinalIgnoreCase))
         {
           _logger.LogDebug("No mapping definition found for hostname: " + leftPart);
           return originalUrl;
