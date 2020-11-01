@@ -1,4 +1,5 @@
-﻿using Sitecore.Modules.EmailCampaign;
+﻿using System.Security.Policy;
+using Sitecore.Configuration;
 
 namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
 {
@@ -11,6 +12,8 @@ namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
     using Sitecore.ExM.Framework.Diagnostics;
     using Sitecore.Links;
     using Sitecore.Modules.EmailCampaign.Core.HostnameMapping;
+    using Sitecore.EmailCampaign.Model.Settings;
+    using Sitecore.Modules.EmailCampaign;
 
     public class HostnameMappingService : Sitecore.Modules.EmailCampaign.Core.HostnameMapping.HostnameMappingService
     {
@@ -28,10 +31,9 @@ namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
         public override string GetServerUrl(Item item)
         {
             Assert.ArgumentNotNull(item, "item");
-            UrlOptions options = new UrlOptions
-            {
-                AlwaysIncludeServerUrl = true
-            };
+            UrlOptions options = (UrlOptions)LinkManager.GetDefaultUrlOptions().Clone();
+            options.AlwaysIncludeServerUrl = true;
+            options.SiteResolving = true;
             return new Uri(LinkManager.GetItemUrl(item, options), UriKind.Absolute).GetLeftPart(UriPartial.Authority);
         }
 
@@ -57,18 +59,34 @@ namespace Sitecore.Support.Modules.EmailCampaign.Core.HostnameMapping
             HostnameMappingDefinition hostnameMappingDefinition = _hostnameMappingRepository.GetByHostname(leftPart);
             if (hostnameMappingDefinition == null)
             {
-                if (!string.Equals(leftPart, GlobalSettings.RendererUrl, StringComparison.OrdinalIgnoreCase))
+                if (Settings.GetBoolSetting("EXM.BaseReplaceRendererUrl", false) && string.Equals(
+                    leftPart.TrimEnd('/'), GlobalSettings.RendererUrl.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("Defining mapping definition from RendererUrl and ManagerRoot for hostname: " + leftPart);
+                    hostnameMappingDefinition = new HostnameMappingDefinition
+                    {
+                        Original = leftPart,
+                        Preview = managerRoot.Settings.PreviewBaseURL,
+                        Public = managerRoot.Settings.BaseURL
+                    };
+                }
+                else if (Settings.GetBoolSetting("EXM.BaseReplaceServerUrl", false) && string.Equals(
+                    leftPart.TrimEnd('/'), Globals.ServerUrl.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("Defining mapping definition from ServerUrl and ManagerRoot for hostname: " + leftPart);
+                    hostnameMappingDefinition = new HostnameMappingDefinition
+                    {
+                        Original = leftPart,
+                        Preview = managerRoot.Settings.PreviewBaseURL,
+                        Public = managerRoot.Settings.BaseURL
+                    };
+                }
+                else
                 {
                     _logger.LogDebug("No mapping definition found for hostname: " + leftPart);
                     return originalUrl;
                 }
-                _logger.LogDebug("Defining mapping definition from RendererUrl and ManagerRoot for hostname: " + leftPart);
-                hostnameMappingDefinition = new HostnameMappingDefinition
-                {
-                    Original = leftPart,
-                    Preview = managerRoot.Settings.PreviewBaseURL,
-                    Public = managerRoot.Settings.BaseURL
-                };
+
             }
             switch (type)
             {
